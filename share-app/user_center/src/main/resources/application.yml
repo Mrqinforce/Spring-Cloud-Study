@@ -1,0 +1,29 @@
+server:
+  port: 0
+spring:
+  application:
+    name: user-center
+  datasource:
+    url: jdbc:mysql://101.201.142.75:3306/user_center2
+    hikari:
+      username: root
+      password: abc.123
+      driver-class-name: com.mysql.cj.jdbc.Driver
+  cloud:
+    nacos:
+      discovery:
+        # 指定nacos server的地址
+        server-addr: 101.201.142.75:8848
+        metadata:
+          instance: aa
+          hello: world
+          version: 1.0.0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
+    <data-source source="LOCAL" name="user_center" uuid="f6ec6eff-03d7-439c-a68d-0083fab8af98">
+      <driver-ref>mysql.8</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
+      <jdbc-url>jdbc:mysql://101.201.142.75:3306/user_center</jdbc-url>
+    </data-source>
+    <data-source source="LOCAL" name="course_center" uuid="40668769-d12e-40b2-851f-adc20f79e0ca">
+      <driver-ref>mysql.8</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
+      <jdbc-url>jdbc:mysql://101.201.142.75:3306/course_center</jdbc-url>
+    </data-source>
+    <data-source source="LOCAL" name="user_center_one@localhost" uuid="c89756fe-63e1-4cd4-8321-ef0051c4a18d">
+      <driver-ref>mysql.8</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
+      <jdbc-url>jdbc:mysql://localhost:3306/user_center_one</jdbc-url>
+    </data-source>
+  </component>
+</project>
