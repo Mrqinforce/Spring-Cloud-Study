@@ -2,22 +2,25 @@ package com.soft1851.contentcenter.service.impl;
 
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
-import com.soft1851.contentcenter.domain.dto.ShareDTO;
-import com.soft1851.contentcenter.domain.dto.UserDTO;
-import com.soft1851.contentcenter.domain.entity.MidUserShare;
-import com.soft1851.contentcenter.domain.entity.Share;
-import com.soft1851.contentcenter.feignclient.UserCenterFeignClient;
 import com.soft1851.contentcenter.dao.MidUserShareMapper;
 import com.soft1851.contentcenter.dao.ShareMapper;
+import com.soft1851.contentcenter.domain.dto.*;
+import com.soft1851.contentcenter.domain.entity.MidUserShare;
+import com.soft1851.contentcenter.domain.entity.Share;
+import com.soft1851.contentcenter.domain.enums.AuditStatusEnum;
+import com.soft1851.contentcenter.feignclient.UserCenterFeignClient;
 import com.soft1851.contentcenter.service.ShareService;
 import lombok.RequiredArgsConstructor;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tk.mybatis.mapper.entity.Example;
 import tk.mybatis.mapper.util.StringUtil;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +35,7 @@ public class ShareServiceImpl implements ShareService {
     private final ShareMapper shareMapper;
     private final UserCenterFeignClient userCenterFeignClient;
     private final MidUserShareMapper midUserShareMapper;
+    private final RocketMQTemplate rocketMQTemplate;
 
     @Override
     public ShareDTO findById(Integer id) {
@@ -95,6 +99,67 @@ public class ShareServiceImpl implements ShareService {
 
         }
         return new PageInfo<>(sharesDeal);
+    }
+
+    @Override
+    public Share ContributeShare(ContributeShareDTO contributeShareDTO) {
+        Share share = Share.builder()
+                .userId(contributeShareDTO.getUserId())
+                .title(contributeShareDTO.getTitle())
+                .createTime(LocalDateTime.now())
+                .updateTime(LocalDateTime.now())
+                .isOriginal(contributeShareDTO.getIsOriginal())
+                .author(contributeShareDTO.getAuthor())
+                .cover(contributeShareDTO.getCover())
+                .summary(contributeShareDTO.getSummary())
+                .price(20)
+                .downloadUrl("ddddd")
+                .buyCount("40")
+                .showFlag(true)
+                .auditStatus("NOT_YET")
+                .reason("dddd")
+                .build();
+
+        shareMapper.insert(share);
+        return share;
+
+
+    }
+
+
+    @Override
+    public Share auditById(Integer id, ShareAuditDTO shareAuditDTO) {
+        // 1、查询share是否存在，不存在或者当前的audit_status ！= NOT_YET, 那么抛异常
+        Share share = this.shareMapper.selectByPrimaryKey(id);
+        if (share == null){
+            throw new IllegalArgumentException("参数非法！ 该分享不存在！");
+        }
+        if (!Objects.equals("NOT_YET", share.getAuditStatus())) {
+            throw new IllegalArgumentException("参数非法！ 该分享已审核通过或审核不通过！");
+        }
+        // 2、审核资源，将状态改为PASS或REJECT
+        // 这个API的主要流程是审核，所以不需要等更新积分的结果返回，可以将加积分改为异步
+        share.setAuditStatus(shareAuditDTO.getAuditStatusEnum().toString());
+        share.setReason(shareAuditDTO.getReason());
+        this.shareMapper.updateByPrimaryKey(share);
+
+        // 3、如果是PASS，那么发送消息给rocketmq，让用户中心去消费，并为发布人添加积分
+        if (AuditStatusEnum.PASSED.equals(shareAuditDTO.getAuditStatusEnum())){
+//            this.rocketMQTemplate.convertAndSend(
+//                   "add-bonus",
+//                   UserAddBonusMsgDTO.builder().userId(share.getUserId())
+//                    .bonus(50)
+//                    .build());
+
+
+           // 4、使用Feign来调用用户中心更改积分的接口
+            this.userCenterFeignClient.addBonus(UserAddBonusMsgDTO.builder()
+                    .userId(share.getUserId())
+                    .bonus(50)
+                    .build());
+        }
+
+        return share;
     }
 
 

@@ -12,7 +12,7 @@ import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Table;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 /**
  * @author qj
@@ -45,17 +45,16 @@ public class Share {
     @Column(name = "create_time")
     @JsonFormat(locale = "zh", timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
     @ApiModelProperty(name = "createTime", value = "创建时间")
-    private Timestamp createTime;
+    private LocalDateTime createTime;
 
     @Column(name = "update_time")
     @JsonFormat(locale = "zh", timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
     @ApiModelProperty(name = "updateTime", value = "更新时间")
-    private Timestamp updateTime;
+    private LocalDateTime updateTime;
 
     @Column(name = "is_original")
     @ApiModelProperty(name = "isOriginal", value = "是否显示 0：否 1：是")
-
-    private Integer isOriginal;
+    private Boolean isOriginal;
 
     @Column(name = "author")
     @ApiModelProperty(name = "author", value = "资源作者")
@@ -83,8 +82,7 @@ public class Share {
 
     @Column(name = "show_flag")
     @ApiModelProperty(name = "showFlag", value = "是否显示 0：否 1：是")
-
-    private Integer showFlag;
+    private Boolean showFlag;
 
     @Column(name = "audit_status")
     @ApiModelProperty(name = "auditStatus", value = "审核状态 NOT_YET： 待审核 PASSED：审核通过 REJECTED：审核不通过 ")

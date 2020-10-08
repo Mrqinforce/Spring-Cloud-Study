@@ -1,5 +1,8 @@
 package com.soft1851.contentcenter.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
+import com.soft1851.contentcenter.service.TestService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.ServiceInstance;
@@ -29,6 +32,8 @@ public class TestController {
 
     @Autowired
     private RestTemplate restTemplate;
+    @Autowired
+    private TestService testService;
 
     @GetMapping("/discovery")
     public List<ServiceInstance> getInstances(){
@@ -48,5 +53,16 @@ public class TestController {
         log.info("请求的目标地址：{}",targetUrl);
         return restTemplate.getForObject(targetUrl,String.class);
     }
+    @GetMapping("byResource")
+    @SentinelResource(value = "byResource",blockHandler = "handleException")
+    public String byResource(){
+        return "按名称限流";
+    }
+
+    public String handleException(BlockException blockException){
+        return "服务不可用";
+    }
+
+
 }
 

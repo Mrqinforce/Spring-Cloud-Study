@@ -96,10 +96,6 @@ public class ShareDTO {
 //     */
 //    private String reason;
 //
-//    /**
-//     * 发布人
-//     */
-//    private String wxNickname;
 
     @ApiModelProperty(name = "share", value = "分享资源信息")
     private Share share;

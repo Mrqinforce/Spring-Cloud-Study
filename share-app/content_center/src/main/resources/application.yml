@@ -18,9 +18,13 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: 101.201.142.75:8848
+        server-addr: localhost:8848
 #        namespace: a2b425a7-92b5-494a-941f-bbfab80e9959
 
+    sentinel:
+      transport:
+        #指定sentinel控制台地址
+        dashboard: localhost:8080
 server:
   port: 8082
 
@@ -53,3 +57,9 @@ logging:
 #    config:
 #      user-center:
 #        loggerLevel: full
+
+rocketmq:
+  name-server: 101.201.142.75:9876
+  producer:
+    # 必须指定group
+    group: test-group
