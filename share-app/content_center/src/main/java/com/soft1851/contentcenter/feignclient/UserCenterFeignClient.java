@@ -1,14 +1,10 @@
 package com.soft1851.contentcenter.feignclient;
 
-import com.soft1851.contentcenter.common.ResponseResult;
 import com.soft1851.contentcenter.configuration.UserCenterFeignConfiguration;
+import com.soft1851.contentcenter.domain.dto.ResponseDTO;
 import com.soft1851.contentcenter.domain.dto.UserAddBonusMsgDTO;
-import com.soft1851.contentcenter.domain.dto.UserDTO;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * @author qj
@@ -28,8 +24,8 @@ public interface UserCenterFeignClient {
      * @param id
      * @return UserDTO
      */
-    @GetMapping("/users/{id}")
-    UserDTO findUserById(@PathVariable Integer id);
+    @GetMapping("/users")
+    ResponseDTO findUserById(@RequestParam Integer id);
 
     /**
      * hello测试
@@ -39,11 +35,10 @@ public interface UserCenterFeignClient {
     String getHello();
 
     /**
-     * 添加积分记录
-     *
-     * @param userAddBonusMsgDTO
+     * 加积分
+     * @param userAddBonusMsgDto
      * @return
      */
-    @PostMapping("/users/bonus/new")
-    ResponseResult addBonus(@RequestBody UserAddBonusMsgDTO userAddBonusMsgDTO);
+    @RequestMapping(value = "/users/addBonus", method = RequestMethod.POST)
+    UserAddBonusMsgDTO addBonusById(@RequestBody UserAddBonusMsgDTO userAddBonusMsgDto);
 }

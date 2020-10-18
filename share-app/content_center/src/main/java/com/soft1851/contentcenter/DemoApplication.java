@@ -1,7 +1,6 @@
 package com.soft1851.contentcenter;
 
 import com.purgeteam.dispose.starter.annotation.EnableGlobalDispose;
-import com.soft1851.contentcenter.configuration.GlobalFeignConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
@@ -12,7 +11,7 @@ import tk.mybatis.spring.annotation.MapperScan;
 @SpringBootApplication
 
 @MapperScan(basePackages = "com.soft1851.contentcenter.dao")
-@EnableFeignClients(defaultConfiguration = GlobalFeignConfiguration.class)
+@EnableFeignClients
 @EnableGlobalDispose
 public class DemoApplication {
 

@@ -1,6 +1,13 @@
 spring:
   application:
     name: content-center
+#  zipkin:
+#    base-url: http://localhost:9411/
+#    discoveryClientEnabled: false
+#  sleuth:
+#    sampler:
+#      # 抽样率，默认是0.1（10%）
+#      probability: 1.0
   datasource:
     url: jdbc:mysql://101.201.142.75:3306/content_center?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
@@ -18,7 +25,8 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: localhost:8848
+#        server-addr: 101.201.142.75:8848
+         server-addr: localhost:8848
 #        namespace: a2b425a7-92b5-494a-941f-bbfab80e9959
 
     sentinel:
@@ -52,11 +60,19 @@ logging:
   level:
     com.soft1851.contentcenter.feignclient.UserCenterFeignClient: debug
 
-#feign:
-#  client:
-#    config:
-#      user-center:
-#        loggerLevel: full
+feign:
+  sentinel:
+    enabled: true
+  client:
+    config:
+      default:
+        loggerLevel: full
+        requestInterceptors:
+          - com.soft1851.contentcenter.feignclient.interceptor.TokenInterceptor
+  httpclient:
+    enable: true
+    max-connections: 200
+    max-connections-per-route: 50
 
 rocketmq:
   name-server: 101.201.142.75:9876

@@ -1,5 +1,7 @@
 package com.soft1851.contentcenter.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.soft1851.contentcenter.dao.MidUserShareMapper;
@@ -19,6 +21,7 @@ import tk.mybatis.mapper.entity.Example;
 import tk.mybatis.mapper.util.StringUtil;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -48,9 +51,12 @@ public class ShareServiceImpl implements ShareService {
         // 2. 复杂的url难以维护：https://user-center/s?ie={ie}&f={f}&rsv_bp=1&rsv_idx=1&tn=baidu&wd=a&rsv_pq=c86459bd002cfbaa&rsv_t=edb19hb%2BvO%2BTySu8dtmbl%2F9dCK%2FIgdyUX%2BxuFYuE0G08aHH5FkeP3n3BXxw&rqlang=cn&rsv_enter=1&rsv_sug3=1&rsv_sug2=0&inputT=611&rsv_sug4=611
         // 3. 难以相应需求的变化，变化很没有幸福感
         // 4. 编程体验不统一
-        UserDTO userDto = this.userCenterFeignClient.findUserById(userId);
+        ResponseDTO responseDto = this.userCenterFeignClient.findUserById(userId);
+
+        UserDTO userDto = convert(responseDto);
 
         ShareDTO shareDto = new ShareDTO();
+        System.out.println(userDto);
         // 属性的装配
         BeanUtils.copyProperties(share,shareDto);
         shareDto.setUserDTO(userDto);
@@ -110,16 +116,15 @@ public class ShareServiceImpl implements ShareService {
                 .updateTime(LocalDateTime.now())
                 .isOriginal(contributeShareDTO.getIsOriginal())
                 .author(contributeShareDTO.getAuthor())
-                .cover(contributeShareDTO.getCover())
+                .cover("https://img3.doubanio.com/view/subject/s/public/s33718992.jpg")
                 .summary(contributeShareDTO.getSummary())
-                .price(20)
-                .downloadUrl("ddddd")
+                .price(contributeShareDTO.getPrice())
+                .downloadUrl(contributeShareDTO.getDownloadUrl())
                 .buyCount("40")
                 .showFlag(true)
                 .auditStatus("NOT_YET")
                 .reason("dddd")
                 .build();
-
         shareMapper.insert(share);
         return share;
 
@@ -144,23 +149,125 @@ public class ShareServiceImpl implements ShareService {
         this.shareMapper.updateByPrimaryKey(share);
 
         // 3、如果是PASS，那么发送消息给rocketmq，让用户中心去消费，并为发布人添加积分
-        if (AuditStatusEnum.PASSED.equals(shareAuditDTO.getAuditStatusEnum())){
+//        if (AuditStatusEnum.PASSED.equals(shareAuditDTO.getAuditStatusEnum())){
 //            this.rocketMQTemplate.convertAndSend(
 //                   "add-bonus",
 //                   UserAddBonusMsgDTO.builder().userId(share.getUserId())
 //                    .bonus(50)
 //                    .build());
 
-
-           // 4、使用Feign来调用用户中心更改积分的接口
-            this.userCenterFeignClient.addBonus(UserAddBonusMsgDTO.builder()
-                    .userId(share.getUserId())
-                    .bonus(50)
-                    .build());
+            //通过feign调用
+            if(AuditStatusEnum.PASSED.equals(shareAuditDTO.getAuditStatusEnum())){
+                UserAddBonusMsgDTO userAddBonusMsgDto = UserAddBonusMsgDTO.builder()
+                        .userId(share.getUserId())
+                        .bonus(50)
+                        .description("投稿加积分")
+                        .event("CONTRIBUTE")
+                        .build();
+                userCenterFeignClient.addBonusById(userAddBonusMsgDto);
+            }
+            return share;
         }
 
-        return share;
+        @Override
+        public PageInfo<Share> queryMyContribute(Integer pageNo, Integer pageSize, Integer userId) {
+            //启动分页
+            PageHelper.startPage(pageNo,pageSize);
+            //构造查询实例
+            Example example = new Example(Share.class);
+            Example.Criteria criteria = example.createCriteria();
+            criteria.andEqualTo("userId",userId);
+            return new PageInfo<>(this.shareMapper.selectByExample(example));
+        }
+
+        @Override
+        public Share exchange(ExchangeDTO exchangeDTO) {
+            int userId = exchangeDTO.getUserId();
+            int shareId = exchangeDTO.getShareId();
+            //根据id查询share，校验分享是否存在
+            Share share = this.shareMapper.selectByPrimaryKey(shareId);
+            if(share == null){
+                throw new IllegalArgumentException("该分享不存在");
+            }
+
+            //获取到积分
+            Integer price = share.getPrice();
+            // 2. 如果当前用户已经兑换过该分享，则直接返回
+            MidUserShare midUserShare = this.midUserShareMapper.selectOne(
+                    MidUserShare.builder()
+                            .shareId(shareId)
+                            .userId(userId)
+                            .build()
+            );
+            if (midUserShare != null) {
+                return share;
+            }
+
+            // 3. 根据当前登录的用户id，查询积分是否够
+            //这里一定要注意通过调用户中心接口得到的返回值，外面已经封装了一层了，要解析才能拿到真正的用户数据
+            ResponseDTO responseDto = this.userCenterFeignClient.findUserById(userId);
+            System.out.println(responseDto);
+            UserDTO userDto = convert(responseDto);
+            System.out.println("用户积分不够");
+            System.out.println(userDto);
+            if (price>userDto.getBonus()){
+                System.out.println("用户积分不够");
+                throw new IllegalArgumentException("用户积分不够");
+            }
+
+
+            //4、扣积分
+            this.userCenterFeignClient.addBonusById(
+                    UserAddBonusMsgDTO.builder()
+                            .userId(userId)
+                            .bonus(price*-1)
+                            .description("兑换分享")
+                            .event("BUY")
+                            .build()
+            );
+            //5、向中间表里插入一条数据
+            this.midUserShareMapper.insert(
+                    MidUserShare.builder()
+                            .userId(userId)
+                            .shareId(shareId)
+                            .build()
+            );
+            return share;
+        }
+
+    @Override
+    public PageInfo<Share> MyExchange(Integer pageNo, Integer pageSize, Integer userId) {
+        PageHelper.startPage(pageNo,pageSize);
+        //构造查询实例
+        Example example = new Example(Share.class);
+        Example.Criteria criteria = example.createCriteria();
+        criteria.andEqualTo("userId",userId);
+
+        List<MidUserShare> midUserShares = this.midUserShareMapper.selectByExample(example);
+        List<Share> shares = new ArrayList<>();
+        midUserShares.forEach(midUserShare -> {
+            Share share = this.shareMapper.selectByPrimaryKey(midUserShare.getShareId());
+            shares.add(share);
+        });
+        return new PageInfo<>(shares);
     }
 
 
+    /**
+         * 将统一的返回响应结果转换为UserDTO类型
+         * @param responseDTO
+         * @return
+         */
+        private UserDTO convert(ResponseDTO responseDTO) {
+            ObjectMapper mapper = new ObjectMapper();
+            UserDTO userDTO = null;
+            try {
+                String json = mapper.writeValueAsString(responseDTO.getData());
+                System.out.println(json);
+                userDTO = mapper.readValue(json, UserDTO.class);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+            return userDTO;
+        }
 }

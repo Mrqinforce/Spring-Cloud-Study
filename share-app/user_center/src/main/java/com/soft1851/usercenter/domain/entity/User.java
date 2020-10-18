@@ -41,7 +41,7 @@ public class User {
      * 微信昵称
      */
     @Column(name = "wx_nickname")
-    private String wxNickname;
+    private String wxNickName;
 
     /**
      * 角色

@@ -32,7 +32,7 @@ public class UserDTO {
     /**
      * 微信昵称
      */
-    private String wxNickname;
+    private String wxNickName;
 
     /**
      * 角色
